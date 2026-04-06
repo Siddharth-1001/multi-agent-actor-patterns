@@ -62,30 +62,41 @@ Messages sent to failed or non-existent actors are routed to a `DeadLetterActor`
 ## Quickstart
 
 ```bash
-pip install multi-agent-actor-patterns
+pip install maap
 ```
 
 ### Run the Research Agent Example
 
 ```python
-from maap import ActorSystem, ResearchSupervisor
+import asyncio
+from maap import ActorSystem
+from maap.examples.research_agent.supervisor import ResearchSupervisor
+from maap.examples.research_agent.messages import ResearchRequest, ResearchComplete
+from maap.core.actor import Actor
 
-# Boot the actor system
-system = ActorSystem()
+class ResultCollector(Actor):
+    async def receive(self, message):
+        if isinstance(message, ResearchComplete):
+            await self._system.put_result(message)
 
-# Spawn the research supervisor
-supervisor = system.spawn(ResearchSupervisor)
+async def main():
+    async with ActorSystem() as system:
+        supervisor = system.spawn(ResearchSupervisor)
+        collector = system.spawn(ResultCollector)
 
-# Send a research task — it breaks this into sub-agents automatically
-supervisor.tell({
-    "type": "RESEARCH_REQUEST",
-    "query": "Summarize recent advances in multi-agent reinforcement learning",
-    "depth": 3  # number of sub-agent workers to spawn
-})
+        await system.send(
+            supervisor.address,
+            ResearchRequest(
+                query="Summarize recent advances in multi-agent reinforcement learning",
+                depth=3,
+                reply_to=collector.address,
+            ),
+        )
 
-# Collect results
-result = system.await_result(timeout=60)
-print(result.summary)
+        result = await system.await_result(timeout=30)
+        print(result.summary)
+
+asyncio.run(main())
 ```
 
 ---
@@ -120,22 +131,23 @@ ResearchSupervisor
 ```
 multi-agent-actor-patterns/
 ├── maap/
+│   ├── __init__.py           # Public API + version
+│   ├── py.typed              # PEP 561 type marker
 │   ├── core/
-│   │   ├── actor.py          # Base Actor class
-│   │   ├── system.py         # ActorSystem (registry + scheduler)
-│   │   ├── mailbox.py        # Async message queue
-│   │   ├── supervisor.py     # SupervisorActor base class
+│   │   ├── actor.py          # Actor base class, lifecycle hooks, address validation
+│   │   ├── errors.py         # Custom exception hierarchy
+│   │   ├── system.py         # ActorSystem (registry + scheduler + graceful shutdown)
+│   │   ├── mailbox.py        # Bounded async message queue
+│   │   ├── supervisor.py     # SupervisorActor with restart budgets
 │   │   └── dead_letter.py    # DeadLetterActor
 │   ├── messages/
-│   │   └── types.py          # Typed message definitions
+│   │   └── types.py          # Typed Pydantic message definitions
 │   └── examples/
 │       └── research_agent/   # Full research pipeline example
-├── tests/
-├── docs/
-├── ARCHITECTURE.md
-├── CONTRIBUTING.md
-├── ROADMAP.md
-└── CHANGELOG.md
+├── tests/                    # Full test suite (pytest-asyncio)
+├── docs/                     # Architecture, changelog, contributing guide
+├── SECURITY.md               # Security policy and disclosure
+└── .github/workflows/ci.yml  # CI pipeline
 ```
 
 ---
@@ -159,15 +171,16 @@ Optional for the research example:
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute code, open issues, and submit PRs |
 | [ROADMAP.md](ROADMAP.md) | Planned features and milestones |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [SECURITY.md](../SECURITY.md) | Security policy and vulnerability reporting |
 
 ---
 
 ## Status
 
-This project is in **alpha**. The core actor primitives and research example are stable. APIs may shift before v1.0. See [ROADMAP.md](ROADMAP.md) for what's next.
+This project is in **alpha** (v0.2.0). The core actor primitives, supervision tree, and research example are stable. APIs may shift before v1.0. See [ROADMAP.md](ROADMAP.md) for what's next.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](../LICENSE).

@@ -20,25 +20,34 @@ This document explains the design of `multi-agent-actor-patterns`: the key abstr
 
 The base unit of the system. An actor is an object that:
 
-- Has a unique **address** (used to send it messages)
+- Has a unique **address** (validated against `[a-zA-Z0-9._-]` pattern)
 - Owns **private state** that only it can read or write
 - Defines **behavior** — a handler function that processes one message at a time
-- Processes messages **sequentially** from its mailbox (no concurrency within a single actor)
+- Processes messages **sequentially** from its bounded mailbox
+- Supports **lifecycle hooks**: `pre_start()`, `post_stop()`, `pre_restart()`
 
 ```python
 class Actor:
     address: ActorAddress
-    mailbox: Mailbox
-    state: dict  # private to this actor
+    mailbox: Mailbox          # bounded async queue
+    state: dict               # private to this actor
+    mailbox_capacity: int     # configurable per-subclass
 
-    async def receive(self, message: Message) -> None:
-        # All logic lives here
-        ...
+    async def pre_start(self) -> None: ...    # setup hook
+    async def receive(self, message) -> None: ...  # message handler
+    async def post_stop(self) -> None: ...    # teardown hook
+    async def pre_restart(self, reason) -> None: ...  # cleanup before restart
 ```
 
 ### Mailbox
 
-Each actor has exactly one mailbox — an async queue that buffers incoming messages. The actor's event loop drains the mailbox one message at a time, guaranteeing sequential processing.
+Each actor has exactly one mailbox — a **bounded** async queue that buffers incoming messages. The actor's event loop drains the mailbox one message at a time, guaranteeing sequential processing.
+
+Key properties:
+- **Bounded capacity** (default: 10,000) — prevents memory exhaustion.
+- Raises `MailboxFullError` when at capacity (backpressure signal).
+- Tracks `total_enqueued` and `total_processed` for observability.
+- `drain()` method for clean shutdown.
 
 This is what makes actors thread-safe without locks: the mailbox is the only entry point to an actor's state.
 
@@ -48,10 +57,11 @@ The runtime that owns all actors. Responsibilities:
 
 - **Registry**: maps addresses to actor instances
 - **Scheduler**: drives each actor's message loop
-- **Lifecycle manager**: spawns and terminates actors
-- **Dead letter routing**: catches messages to dead actors
+- **Lifecycle manager**: spawns, stops, and shuts down actors
+- **Dead letter routing**: catches messages to dead or overloaded actors
+- **Graceful shutdown**: stops all actors in reverse order with a timeout
 
-There is one `ActorSystem` per process. Actors are spawned into it and addressed through it.
+Supports async context manager: `async with ActorSystem() as system: ...`
 
 ```
 ActorSystem
@@ -67,9 +77,10 @@ A specialized actor that manages a set of child (worker) actors. The supervisor:
 - Spawns worker actors
 - Monitors them for failure signals
 - Applies a **restart strategy** when a worker fails:
-  - `RESTART`: kill and respawn the failed worker
+  - `RESTART`: kill and respawn the failed worker (with restart budget)
   - `STOP`: terminate the worker, don't replace it
   - `ESCALATE`: propagate the failure to this supervisor's own supervisor
+- Enforces a **restart budget**: max N restarts within a time window. If exceeded, automatically escalates.
 
 This forms a supervision tree — the same pattern Erlang OTP popularized.
 
