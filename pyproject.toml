@@ -4,13 +4,99 @@ build-backend = "hatchling.build"
 
 [project]
 name = "maap"
-version = "0.1.0"
-description = "Multi-Agent Actor Patterns — reference implementation"
+version = "0.2.0"
+description = "Multi-Agent Actor Patterns — a lightweight, async-first actor framework for supervised multi-agent systems in Python."
+readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
-dependencies = ["pydantic>=2.0"]
+authors = [{name = "Siddharth Bhalsod"}]
+keywords = ["actor-model", "multi-agent", "async", "supervisor", "llm", "ai-agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pydantic>=2.0,<3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/siddharthbhalsod/multi-agent-actor-patterns"
+Documentation = "https://github.com/siddharthbhalsod/multi-agent-actor-patterns/tree/main/docs"
+Repository = "https://github.com/siddharthbhalsod/multi-agent-actor-patterns"
+Issues = "https://github.com/siddharthbhalsod/multi-agent-actor-patterns/issues"
+Changelog = "https://github.com/siddharthbhalsod/multi-agent-actor-patterns/blob/main/docs/CHANGELOG.md"
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-asyncio", "pytest-cov", "ruff", "mypy"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",
+    "mypy>=1.8",
+    "coverage>=7.0",
+]
+# Optional LLM backend for the research agent example
+llm = ["anthropic>=0.25"]
+
+# --- Tool configuration ---
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["error", "ignore::DeprecationWarning"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 99
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "S",    # flake8-bandit (security)
+    "T20",  # flake8-print
+    "SIM",  # flake8-simplify
+    "TCH",  # flake8-type-checking
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "S101",  # allow assert in tests
+    "S603",  # allow subprocess without shell=True check
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "T20"]
+"maap/examples/**" = ["T20"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "anthropic.*"
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["maap"]
+omit = ["maap/examples/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
