@@ -1,3 +1,3 @@
-from maap.messages.types import Message, ActorFailed, DeadLetter
+from maap.messages.types import ActorFailed, DeadLetter, Message
 
-__all__ = ["Message", "ActorFailed", "DeadLetter"]
+__all__ = ["ActorFailed", "DeadLetter", "Message"]
