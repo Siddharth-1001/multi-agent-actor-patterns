@@ -1,6 +1,8 @@
 import asyncio
+
 import pytest
-from maap import ActorSystem, Actor
+
+from maap import Actor, ActorSystem
 
 
 class EchoActor(Actor):

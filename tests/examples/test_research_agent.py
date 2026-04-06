@@ -1,11 +1,12 @@
 import asyncio
-import pytest
 from typing import Any
 
-from maap import ActorSystem, Actor
+import pytest
+
+from maap import Actor, ActorSystem
 from maap.examples.research_agent.messages import (
-    ResearchRequest,
     ResearchComplete,
+    ResearchRequest,
 )
 from maap.examples.research_agent.supervisor import ResearchSupervisor
 

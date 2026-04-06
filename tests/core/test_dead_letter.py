@@ -1,6 +1,8 @@
 import asyncio
-import pytest
 import logging
+
+import pytest
+
 from maap import ActorSystem
 
 
