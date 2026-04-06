@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import Literal
+
 from maap.messages.types import Message
 
 

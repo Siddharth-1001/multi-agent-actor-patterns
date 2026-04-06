@@ -20,22 +20,22 @@ class ResultCollectorActor(Actor):
 
 
 async def main() -> None:
-    system = ActorSystem()
-    supervisor = system.spawn(ResearchSupervisor)
-    result_collector = system.spawn(ResultCollectorActor)
+    async with ActorSystem() as system:
+        supervisor = system.spawn(ResearchSupervisor)
+        result_collector = system.spawn(ResultCollectorActor)
 
-    await supervisor.tell(
-        ResearchRequest(
-            query="Summarize recent advances in multi-agent reinforcement learning",
-            depth=3,
-            reply_to=result_collector.address,
-        ),
-    )
+        await supervisor.tell(
+            ResearchRequest(
+                query="Summarize recent advances in multi-agent reinforcement learning",
+                depth=3,
+                reply_to=result_collector.address,
+            ),
+        )
 
-    result: ResearchComplete = await system.await_result(timeout=30)
-    print("\n=== Research Complete ===")
-    print(f"Query: {result.query}")
-    print(f"\nSummary:\n{result.summary}")
+        result: ResearchComplete = await system.await_result(timeout=30)
+        print("\n=== Research Complete ===")
+        print(f"Query: {result.query}")
+        print(f"\nSummary:\n{result.summary}")
 
 
 if __name__ == "__main__":

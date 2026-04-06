@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 import logging
 import uuid
 from typing import Any
 
-from maap.core.supervisor import SupervisorActor, RestartStrategy
+from maap.core.supervisor import RestartStrategy, SupervisorActor
 from maap.examples.research_agent.messages import (
+    ResearchComplete,
     ResearchRequest,
     SubTask,
     SubTaskResult,
-    ResearchComplete,
 )
 from maap.examples.research_agent.worker import ResearchWorkerActor
 
@@ -42,9 +43,7 @@ class ResearchSupervisor(SupervisorActor):
             case SubTaskResult():
                 await self._handle_subtask_result(message)
             case _:
-                logger.warning(
-                    "ResearchSupervisor received unexpected message: %r", message
-                )
+                logger.warning("ResearchSupervisor received unexpected message: %r", message)
 
     async def _handle_research_request(self, request: ResearchRequest) -> None:
         self._reply_to = request.reply_to
